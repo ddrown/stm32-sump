@@ -5,12 +5,21 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "gpio.h"
+
 static void command_memory() {
   printf("heap = %lu/%lu stacksize = %lu/%lu\n", heapsize(), heapmax(), stacksize(), stackmax());
 }
 
 static void command_serial() {
   printf("output timeouts = %lu input overruns = %lu\n", timeouts, overruns);
+}
+
+static void command_dump_gpio() {
+  for(uint16_t i = 0; i < GPIO_BUFFER_SIZE; i++) {
+    printf("%x", gpio_buffer[i] & 0x1);
+  }
+  printf("\n");
 }
 
 static void blink(const char *option) {
@@ -28,6 +37,8 @@ static void print_help() {
   printf("blink (on|off|toggle) - blink LED\n");
   printf("mem - show mem\n");
   printf("serial - show usb serial stats\n");
+  printf("gpio - show gpio data\n");
+  printf("poll - poll 1024 samples at 1MHz\n");
 }
 
 static void run_command(char *cmdline) {
@@ -37,6 +48,11 @@ static void run_command(char *cmdline) {
     command_memory();
   } else if(strcmp("serial", cmdline) == 0) {
     command_serial();
+  } else if(strcmp("gpio", cmdline) == 0) {
+    command_dump_gpio();
+  } else if(strcmp("poll", cmdline) == 0) {
+    do_gpio_dma();
+    command_dump_gpio();
   } else {
     print_help();
   }

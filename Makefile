@@ -47,7 +47,6 @@ C_SOURCES = \
   Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c \
   Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c \
   Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c \
-  Src/commandline.c \
   Src/main.c \
   Src/stm32f1xx_hal_msp.c \
   Src/stm32f1xx_it.c \
@@ -56,7 +55,9 @@ C_SOURCES = \
   Src/usbd_cdc_if.c \
   Src/usbd_conf.c \
   Src/usbd_desc.c \
-  Src/usb_device.c  
+  Src/usb_device.c \
+  Src/gpio.c \
+  Src/sump.c
 ASM_SOURCES = \
   startup/startup_stm32f103xb.s
 

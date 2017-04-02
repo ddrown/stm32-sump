@@ -26,7 +26,7 @@ int _write(int fd, const void *buf, size_t count) {
 /* memory functions
  *******************************************
  */
-static char heap_start[2048];
+static char heap_start[1024];
 
 /*  sbrk - Increase program data space.
  *  newlib's malloc and related functions depend on this (like printf)
