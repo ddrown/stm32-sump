@@ -5,7 +5,7 @@
 ######################################
 # target
 ######################################
-TARGET = serial-usb-103
+TARGET = sump
 
 ######################################
 # building variables
@@ -58,7 +58,7 @@ C_SOURCES = \
   Src/usbd_desc.c \
   Src/usb_device.c  
 ASM_SOURCES = \
-  Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc/startup_stm32f103xb.s
+  startup/startup_stm32f103xb.s
 
 #######################################
 # binaries
