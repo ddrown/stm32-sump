@@ -91,8 +91,7 @@
 /* Create buffer for reception and transmission           */
 /* It's up to user to redefine and/or remove those define */
 /* Received Data over USB are stored in this buffer       */
-volatile uint8_t UserRxBufferFS[CDC_BUFFERS][APP_RX_DATA_SIZE];
-uint8_t UserRxBufferFS_active = 0;
+uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 
 /* Send Data over USB CDC are stored in this buffer       */
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
@@ -150,8 +149,7 @@ static int8_t CDC_Init_FS(void)
   /* USER CODE BEGIN 3 */ 
   /* Set Application Buffers */
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
-  UserRxBufferFS_active = 0;
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, (uint8_t *)UserRxBufferFS[UserRxBufferFS_active]);
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, (uint8_t *)UserRxBufferFS);
   return (USBD_OK);
   /* USER CODE END 3 */ 
 }
@@ -261,25 +259,17 @@ static int8_t CDC_Control_FS  (uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS (uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  uint8_t packet_rx_buf = UserRxBufferFS_active;
-
-  UserRxBufferFS_active++;
-  if(UserRxBufferFS_active >= CDC_BUFFERS) {
-    UserRxBufferFS_active = 0;
-  }
 /*
   write_uart_s("U ");
   write_uart_u(*Len);
-  write_uart_s(" ");
-  write_uart_u(UserRxBufferFS_active);
   write_uart_s("\n");
 */
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, (uint8_t *)UserRxBufferFS[UserRxBufferFS_active]);
-  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-
   for(uint32_t i = 0; i < *Len; i++) {
-    sump_cmd(UserRxBufferFS[packet_rx_buf][i]);
+    sump_cmd(UserRxBufferFS[i]);
   }
+
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, (uint8_t *)UserRxBufferFS);
+  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
   return (USBD_OK);
   /* USER CODE END 6 */ 

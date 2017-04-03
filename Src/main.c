@@ -49,6 +49,7 @@
 #include "syscall.h"
 #include "usbd_cdc_if.h"
 #include "gpio.h"
+#include "uart.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
