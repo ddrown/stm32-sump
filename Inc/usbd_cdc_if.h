@@ -68,7 +68,6 @@
 /* USER CODE BEGIN EXPORTED_DEFINES */
 #define APP_RX_DATA_SIZE  64
 #define APP_TX_DATA_SIZE  1
-#define USB_CDC_NUM_BUFFERS 2
 /* USER CODE END EXPORTED_DEFINES */
 
 /**
@@ -101,10 +100,8 @@
 extern USBD_CDC_ItfTypeDef  USBD_Interface_fops_FS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-extern volatile uint8_t UserRxBufferFS[USB_CDC_NUM_BUFFERS][APP_RX_DATA_SIZE+1];
-extern volatile uint32_t UserRxBufferFS_Len[USB_CDC_NUM_BUFFERS];
-extern volatile uint8_t UserRxBufferFS_active;
-extern uint32_t overruns;
+#define CDC_BUFFERS 2
+extern volatile uint8_t UserRxBufferFS[CDC_BUFFERS][APP_RX_DATA_SIZE];
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**

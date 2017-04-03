@@ -49,7 +49,6 @@
 #include "syscall.h"
 #include "usbd_cdc_if.h"
 #include "gpio.h"
-#include "sump.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -116,12 +115,10 @@ int main(void)
   setvbuf(stdout, NULL, _IONBF, 0);
   setvbuf(stderr, NULL, _IONBF, 0);
   HAL_TIM_Base_Start(&htim1);
-#if 0
   // setup test PWM output
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-#endif
-  do_gpio_dma();
+  write_uart_s("starting\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -131,18 +128,6 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-    uint8_t inactive = UserRxBufferFS_active;
-    if(inactive == 0) {
-      inactive = USB_CDC_NUM_BUFFERS - 1;
-    } else {
-      inactive--;
-    }
-    if(UserRxBufferFS_Len[inactive] > 0) {
-      for(uint8_t i = 0; i < UserRxBufferFS_Len[inactive]; i++) {
-        sump_cmd(UserRxBufferFS[inactive][i]);
-      }
-      UserRxBufferFS_Len[inactive] = 0;
-    }
   }
   /* USER CODE END 3 */
 

@@ -57,7 +57,8 @@ C_SOURCES = \
   Src/usbd_desc.c \
   Src/usb_device.c \
   Src/gpio.c \
-  Src/sump.c
+  Src/sump.c \
+  Src/uart.c
 ASM_SOURCES = \
   startup/startup_stm32f103xb.s
 
@@ -77,7 +78,7 @@ BIN = $(CP) -O binary -S
 #######################################
 # macros for gcc
 AS_DEFS =
-C_DEFS = -D__weak="__attribute__((weak))" -D__packed="__attribute__((__packed__))" -DUSE_HAL_DRIVER -DSTM32F103xB
+C_DEFS = -D__weak="__attribute__((weak))" -D__packed="__attribute__((__packed__))" -DUSE_HAL_DRIVER -DSTM32F103xB -D_GNU_SOURCE
 # includes for gcc
 AS_INCLUDES =
 C_INCLUDES = -IDrivers/CMSIS/Device/ST/STM32F1xx/Include
@@ -140,7 +141,7 @@ $(BUILD_DIR):
 	mkdir -p $@		
 
 flash: $(BUILD_DIR)/$(TARGET).bin
-	/cygdrive/c/Program\ Files\ \(x86\)/STMicroelectronics/STM32\ ST-LINK\ Utility/ST-LINK\ Utility/ST-LINK_CLI -c SWD -P $< 0x8000000 -Rst -Run </dev/null
+	openocd
 
 #######################################
 # clean up

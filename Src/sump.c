@@ -35,6 +35,8 @@
 #include "stm32f1xx_hal.h"
 #include "sump.h"
 #include "gpio.h"
+#include "uart.h"
+#include "usbd_cdc_if.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -60,95 +62,79 @@
 #define SUMP_SELF_TEST 0x03
 #define SUMP_GET_METADATA 0x04
 
-static uint8_t cmdBytes[3];
+typedef enum {
+    STATE_READ4 = 0,
+    STATE_READ3 = 1,
+    STATE_READ2 = 2,
+    STATE_READ1 = 3,
+    STATE_EXTENDED_CMD = 4,
+    STATE_CMD = 5
+} sump_cmd_state;
 
-static void getCmd() {
+static void setupDelay(uint32_t divider) {
   // TODO
 }
 
-static void setupDelay() {
-  // TODO
-}
+const static uint8_t metadata[] = {
+  1, 'A', 'G', 'L', 'A', 'S', 'v', '0', 0, // device name
+  2, '0', '.', '1', '3', 0,                // firmware version
+  0x21, 0, 0, 40, 0,                       // sample memory = 40*256 = 10240 bytes
+  0x23, 0, 0x5B, 0x8D, 80,                 // sample rate (6MHz)
+  0x40, 8,                                 // number of probes = 8
+  0x41, 2,                                 // protocol version 2
+  0                                        // end of data
+};
 
 static void get_metadata() {
-  /* device name */
-  printf("%cAGLASv0%c", 1, 0);
-  /* firmware version */
-  printf("%c0.13%c", 2, 0);
-  /* sample memory */
-  printf("%c%c%c", 0x21, 0, 0);
-  /* 7168 bytes */
-  printf("%c%c", 0x1C, 0);
-
-  /* sample rate (4MHz) */
-  printf("%c%c%c%c%c", 0x23, 0, 0x3D, 0x9, 0);
-
-  /* number of probes (6 by default on Arduino, 8 on Mega) */
-  printf("%c%c",0x40, 0x08);
-
-  /* protocol version (2) */
-  printf("%c%c", 0x41, 0x2);
-
-  /* end of data */
-  printf("%c", 0x00);
+  write(0, metadata, sizeof(metadata));
 }
 
-void sump_cmd(char c) {
+void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
   uint32_t trigger, trigger_values, divider, readCount, rleEnabled, delayCount;
 
-  switch (c) {
-    case SUMP_RESET:
-      /*
-       * We don't do anything here as some unsupported extended commands have
-       * zero bytes and are mistaken as resets.  This can trigger false resets
-       * so we don't erase the data or do anything for a reset.
-       */
-      break;
-    case SUMP_QUERY:
-      /* return the expected bytes. */
-      printf("1ALS");
-      break;
-    case SUMP_ARM:
-      /*
-       * Zero out any previous samples before arming.
-       * Done here instead via reset due to spurious resets.
-       */
-      memset(gpio_buffer, '\0', GPIO_BUFFER_SIZE);
-      do_gpio_dma(); // TODO: triggers
-      write(0, gpio_buffer, GPIO_BUFFER_SIZE); // TODO: does this work? does it need to be cut into 64 byte pieces?
-      break;
+/*
+  write_uart_s("e ");
+  write_uart_u(last_cmd);
+  write_uart_s(", ");
+  write_uart_u(extended_cmd_arg[0]);
+  write_uart_s(", ");
+  write_uart_u(extended_cmd_arg[1]);
+  write_uart_s(", ");
+  write_uart_u(extended_cmd_arg[2]);
+  write_uart_s(", ");
+  write_uart_u(extended_cmd_arg[3]);
+  write_uart_s("\n");
+*/
+
+  switch (last_cmd) {
     case SUMP_TRIGGER_MASK:
       /*
        * the trigger mask byte has a '1' for each enabled trigger so
        * we can just use it directly as our trigger mask.
        */
-      getCmd();
-      trigger = cmdBytes[0];
+      trigger = extended_cmd_arg[0];
       break;
     case SUMP_TRIGGER_VALUES:
       /*
        * trigger_values can be used directly as the value of each bit
        * defines whether we're looking for it to be high or low.
        */
-      getCmd();
-      trigger_values = cmdBytes[0];
+      trigger_values = extended_cmd_arg[0];
       break;
     case SUMP_TRIGGER_CONFIG:
       /* read the rest of the command bytes, but ignore them. */
-      getCmd();
       break;
     case SUMP_SET_DIVIDER:
       /*
        * the shifting needs to be done on the 32bit unsigned long variable
        * so that << 16 doesn't end up as zero.
        */
-      getCmd();
-      divider = cmdBytes[2];
+      divider = extended_cmd_arg[2];
       divider = divider << 8;
-      divider += cmdBytes[1];
+      divider += extended_cmd_arg[1];
       divider = divider << 8;
-      divider += cmdBytes[0];
-      setupDelay(); // TODO
+      divider += extended_cmd_arg[0];
+      setupDelay(divider);
       break;
     case SUMP_SET_READ_DELAY_COUNT:
       /*
@@ -161,19 +147,58 @@ void sump_cmd(char c) {
        * if delayCount < readCount we return (readCount - delayCount) of
        * samples from before the trigger fired.
        */
-      getCmd();
-      readCount = 4 * (((cmdBytes[1] << 8) | cmdBytes[0]) + 1);
+      readCount = 4 * (((extended_cmd_arg[1] << 8) | extended_cmd_arg[0]) + 1);
       if (readCount > GPIO_BUFFER_SIZE)
         readCount = GPIO_BUFFER_SIZE;
-      delayCount = 4 * (((cmdBytes[3] << 8) | cmdBytes[2]) + 1);
+      delayCount = 4 * (((extended_cmd_arg[3] << 8) | extended_cmd_arg[2]) + 1);
       if (delayCount > GPIO_BUFFER_SIZE)
         delayCount = GPIO_BUFFER_SIZE;
       break; // TODO
     case SUMP_SET_FLAGS:
       /* read the rest of the command bytes and check if RLE is enabled. */
-      getCmd();
-      rleEnabled = ((cmdBytes[1] & 0b1000000) != 0);
+      rleEnabled = ((extended_cmd_arg[1] & 0b1000000) != 0);
       break; // TODO
+  }
+}
+
+void sump_read_command(sump_cmd_state *read_state, char c) {
+/*
+  write_uart_s("c ");
+  write_uart_u(c);
+  write_uart_s("\n");
+*/
+  switch (c) {
+    case SUMP_RESET:
+      /*
+       * We don't do anything here as some unsupported extended commands have
+       * zero bytes and are mistaken as resets.  This can trigger false resets
+       * so we don't erase the data or do anything for a reset.
+       */
+      break;
+    case SUMP_QUERY:
+      /* return the expected bytes. */
+      write(0, "1ALS", 4);
+      break;
+    case SUMP_ARM:
+      /*
+       * Zero out any previous samples before arming.
+       * Done here instead via reset due to spurious resets.
+       */
+      memset(gpio_buffer, '\0', GPIO_BUFFER_SIZE);
+      do_gpio_dma(); // TODO: triggers
+      int status = CDC_Transmit_FS(gpio_buffer, GPIO_BUFFER_SIZE);
+      write_uart_u(status);
+      write_uart_s("\n");
+      break;
+    case SUMP_TRIGGER_MASK:
+    case SUMP_TRIGGER_VALUES:
+    case SUMP_TRIGGER_CONFIG:
+    case SUMP_SET_DIVIDER:
+    case SUMP_SET_READ_DELAY_COUNT:
+    case SUMP_SET_FLAGS:
+      // extended commands have a 4 byte argument
+      *read_state = STATE_READ4;
+      break;
     case SUMP_GET_METADATA:
       /*
        * We return a description of our capabilities.
@@ -187,5 +212,27 @@ void sump_cmd(char c) {
     default:
       /* ignore any unrecognized bytes. */
       break;
+  }
+}
+
+void sump_cmd(char c) {
+  static sump_cmd_state read_state = STATE_CMD;
+  static char last_cmd = 0;
+  static uint8_t extended_cmd_arg[4];
+
+  if(read_state == STATE_CMD) {
+    last_cmd = c;
+    sump_read_command(&read_state, c);
+  } else if(read_state >= STATE_READ4 && read_state <= STATE_READ1) {
+    extended_cmd_arg[read_state] = c;
+    read_state = read_state + 1;
+    if(read_state == STATE_EXTENDED_CMD) {
+      extended_sump_command(last_cmd, extended_cmd_arg);
+      read_state = STATE_CMD;
+    }
+  } else {
+    write_uart_s("unknown state ");
+    write_uart_u(read_state);
+    write_uart_s("\n");
   }
 }
