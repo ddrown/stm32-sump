@@ -28,6 +28,36 @@ void do_gpio_loop(uint32_t length) {
     length = sizeof(gpio_buffer);
   }
 
-  HAL_DMA_Start(htim1.hdma[TIM_DMA_ID_UPDATE], (uint32_t)&GPIOA->IDR, (uint32_t)&gpio_buffer, length);
-  state = HAL_DMA_PollForTransfer(htim1.hdma[TIM_DMA_ID_UPDATE], HAL_DMA_FULL_TRANSFER, 10);
+  __disable_irq();
+
+  do {
+  // read 5KB at a time, jump takes too many cycles
+  // 5KB at a time = 50KB flash used
+  // 2KB at a time = 32KB flash used
+  // 2KB version will slip ~83ns every ~170us or ~486ppm off due to jump
+  // 2KB version results in a 100KHz synchronus clock from TIM3 showing up as 100.037KHz
+  // alternative to test: use code in memory?
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+#include "read256.c"
+  } while(buffer < gpio_buffer+length);
+
+  __enable_irq();
 }

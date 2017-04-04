@@ -1,16 +1,6 @@
 #MicroXplorer Configuration settings - do not modify
-Dma.MEMTOMEM.1.Direction=DMA_MEMORY_TO_MEMORY
-Dma.MEMTOMEM.1.Instance=DMA1_Channel1
-Dma.MEMTOMEM.1.MemDataAlignment=DMA_MDATAALIGN_BYTE
-Dma.MEMTOMEM.1.MemInc=DMA_MINC_ENABLE
-Dma.MEMTOMEM.1.Mode=DMA_NORMAL
-Dma.MEMTOMEM.1.PeriphDataAlignment=DMA_PDATAALIGN_BYTE
-Dma.MEMTOMEM.1.PeriphInc=DMA_PINC_DISABLE
-Dma.MEMTOMEM.1.Priority=DMA_PRIORITY_VERY_HIGH
-Dma.MEMTOMEM.1.RequestParameters=Instance,Direction,PeriphInc,MemInc,PeriphDataAlignment,MemDataAlignment,Mode,Priority
 Dma.Request0=TIM1_UP
-Dma.Request1=MEMTOMEM
-Dma.RequestsNb=2
+Dma.RequestsNb=1
 Dma.TIM1_UP.0.Direction=DMA_PERIPH_TO_MEMORY
 Dma.TIM1_UP.0.Instance=DMA1_Channel5
 Dma.TIM1_UP.0.MemDataAlignment=DMA_MDATAALIGN_BYTE
@@ -206,7 +196,7 @@ RTC.OutPut=RTC_OUTPUTSOURCE_ALARM
 SH.S_TIM3_CH1.0=TIM3_CH1,PWM Generation1 CH1
 SH.S_TIM3_CH1.ConfNb=1
 TIM1.IPParameters=Prescaler,Period
-TIM1.Period=71
+TIM1.Period=11
 TIM1.Prescaler=0
 TIM3.Channel-PWM\ Generation1\ CH1=TIM_CHANNEL_1
 TIM3.IPParameters=Channel-PWM Generation1 CH1,Period,Pulse-PWM Generation1 CH1
