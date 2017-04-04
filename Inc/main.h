@@ -55,6 +55,7 @@
 #define LED_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
+void Error_Handler(void);
 /* USER CODE END Private defines */
 
 /**

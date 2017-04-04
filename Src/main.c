@@ -50,6 +50,7 @@
 #include "usbd_cdc_if.h"
 #include "gpio.h"
 #include "uart.h"
+#include "sump.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -119,7 +120,7 @@ int main(void)
   // setup test PWM output
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-  write_uart_s("starting\n");
+  write_uart_s("\nstarting\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -129,6 +130,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+    poll_sump();
   }
   /* USER CODE END 3 */
 

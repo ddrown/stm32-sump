@@ -71,8 +71,21 @@ typedef enum {
     STATE_CMD = 5
 } sump_cmd_state;
 
+static uint8_t run_gpio = 0;
+
 static void setupDelay(uint32_t divider) {
-  // TODO
+  if(divider >= 11 && divider < 65536) {
+    HAL_TIM_Base_Stop(&htim1);
+    htim1.Init.Period = divider;
+    if (HAL_TIM_Base_Init(&htim1) != HAL_OK) {
+      Error_Handler();
+    }
+    HAL_TIM_Base_Start(&htim1);
+  } else {
+    write_uart_s("invalid divider for sample clock: ");
+    write_uart_u(divider);
+    write_uart_s("\n");
+  }
 }
 
 const static uint8_t metadata[] = {
@@ -89,9 +102,10 @@ static void get_metadata() {
   write(0, metadata, sizeof(metadata));
 }
 
-void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
-  uint32_t trigger, trigger_values, divider, readCount, rleEnabled, delayCount;
+static uint8_t trigger, trigger_values, rleEnabled;
+static uint32_t readCount, delayCount, divider = 11;
 
+void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
 /*
   write_uart_s("e ");
   write_uart_u(last_cmd);
@@ -113,6 +127,9 @@ void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
        * we can just use it directly as our trigger mask.
        */
       trigger = extended_cmd_arg[0];
+      write_uart_s("trigger ");
+      write_uart_u(trigger);
+      write_uart_s("\n");
       break;
     case SUMP_TRIGGER_VALUES:
       /*
@@ -120,8 +137,12 @@ void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
        * defines whether we're looking for it to be high or low.
        */
       trigger_values = extended_cmd_arg[0];
+      write_uart_s("t_values ");
+      write_uart_u(trigger_values);
+      write_uart_s("\n");
       break;
     case SUMP_TRIGGER_CONFIG:
+      write_uart_s("t_config = ?\n");
       /* read the rest of the command bytes, but ignore them. */
       break;
     case SUMP_SET_DIVIDER:
@@ -134,6 +155,9 @@ void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
       divider += extended_cmd_arg[1];
       divider = divider << 8;
       divider += extended_cmd_arg[0];
+      write_uart_s("divider ");
+      write_uart_u(divider);
+      write_uart_s("\n");
       setupDelay(divider);
       break;
     case SUMP_SET_READ_DELAY_COUNT:
@@ -150,13 +174,22 @@ void extended_sump_command(char last_cmd, uint8_t *extended_cmd_arg) {
       readCount = 4 * (((extended_cmd_arg[1] << 8) | extended_cmd_arg[0]) + 1);
       if (readCount > GPIO_BUFFER_SIZE)
         readCount = GPIO_BUFFER_SIZE;
+      write_uart_s("read# ");
+      write_uart_u(readCount);
+      write_uart_s("\n");
       delayCount = 4 * (((extended_cmd_arg[3] << 8) | extended_cmd_arg[2]) + 1);
       if (delayCount > GPIO_BUFFER_SIZE)
         delayCount = GPIO_BUFFER_SIZE;
+      write_uart_s("delay# ");
+      write_uart_u(delayCount);
+      write_uart_s("\n");
       break; // TODO
     case SUMP_SET_FLAGS:
       /* read the rest of the command bytes and check if RLE is enabled. */
       rleEnabled = ((extended_cmd_arg[1] & 0b1000000) != 0);
+      write_uart_s("rle ");
+      write_uart_u(rleEnabled);
+      write_uart_s("\n");
       break; // TODO
   }
 }
@@ -185,10 +218,7 @@ void sump_read_command(sump_cmd_state *read_state, char c) {
        * Done here instead via reset due to spurious resets.
        */
       memset(gpio_buffer, '\0', GPIO_BUFFER_SIZE);
-      do_gpio_dma(); // TODO: triggers
-      int status = CDC_Transmit_FS(gpio_buffer, GPIO_BUFFER_SIZE);
-      write_uart_u(status);
-      write_uart_s("\n");
+      run_gpio = 1;
       break;
     case SUMP_TRIGGER_MASK:
     case SUMP_TRIGGER_VALUES:
@@ -234,5 +264,23 @@ void sump_cmd(char c) {
     write_uart_s("unknown state ");
     write_uart_u(read_state);
     write_uart_s("\n");
+  }
+}
+
+void poll_sump() {
+  if(run_gpio) {
+    run_gpio = 0;
+    if(divider < 11) {
+      write_uart_s("using gpio_loop\n");
+      do_gpio_loop(readCount);
+    } else {
+      do_gpio_dma(readCount); // TODO: triggers
+    }
+    int status = CDC_Transmit_FS(gpio_buffer, readCount);
+    if(status != USBD_OK) {
+      write_uart_s("USB TX state: ");
+      write_uart_u(status);
+      write_uart_s("\n");
+    }
   }
 }
