@@ -11,8 +11,6 @@ static inline void wait_for_trigger(uint8_t trigger_mask, uint8_t trigger_values
 }
 
 void do_gpio_dma(uint32_t length, uint8_t trigger_mask, uint8_t trigger_values) {
-  HAL_StatusTypeDef state;
-
   if(length > sizeof(gpio_buffer)) {
     length = sizeof(gpio_buffer);
   }
