@@ -1,3 +1,11 @@
+  /* jump takes too many cycles so the timing isn't completely right.  
+   * Include this file multiple times to reduce the number of jumps needed in exchange for more flash space used
+   * 20*256=5KB at a time = 50KB flash used, 1 jump needed for 10KB buffer
+   * 8*256=2KB at a time = 32KB flash used, 4 jumps needed for 10KB buffer
+   * 2KB version will slip ~83ns every ~170us or ~486ppm off one cycle due to jump
+   * 2KB version results in a 100KHz synchronus clock from TIM3 showing up as 100.037KHz
+   */
+
     asm(
       "ldr     r1, [%1]\n"
       "strb    r1, [%0, #0]\n"

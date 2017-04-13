@@ -4,60 +4,54 @@
 
 uint8_t gpio_buffer[GPIO_BUFFER_SIZE];
 
-void do_gpio_dma(uint32_t length) {
+static inline void wait_for_trigger(uint8_t trigger_mask, uint8_t trigger_values) {
+  if(trigger_mask) {
+    while((GPIOA->IDR ^ trigger_values) & trigger_mask); // wait until trigger
+  }
+}
+
+void do_gpio_dma(uint32_t length, uint8_t trigger_mask, uint8_t trigger_values) {
   HAL_StatusTypeDef state;
 
   if(length > sizeof(gpio_buffer)) {
     length = sizeof(gpio_buffer);
   }
 
+  wait_for_trigger(trigger_mask, trigger_values); // TODO: switch this to watching the DMA values
+
   HAL_DMA_Start(htim1.hdma[TIM_DMA_ID_UPDATE], (uint32_t)&GPIOA->IDR, (uint32_t)&gpio_buffer, length);
   __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
-  state = HAL_DMA_PollForTransfer(htim1.hdma[TIM_DMA_ID_UPDATE], HAL_DMA_FULL_TRANSFER, 110);
+  HAL_DMA_PollForTransfer(htim1.hdma[TIM_DMA_ID_UPDATE], HAL_DMA_FULL_TRANSFER, 100);
   __HAL_TIM_DISABLE_DMA(&htim1, TIM_DMA_UPDATE);
-  if(state != HAL_OK) {
-    write_uart_s("DMA state ");
-    write_uart_u(state);
-    write_uart_s("\n");
-  }
 }
 
-void do_gpio_loop(uint32_t length) {
+void do_gpio_loop(uint32_t length, uint8_t trigger_mask, uint8_t trigger_values) {
   uint8_t *buffer = gpio_buffer;
+  uint8_t *ending;
+
   if(length > sizeof(gpio_buffer)) {
     length = sizeof(gpio_buffer);
   }
+  ending = gpio_buffer+length;
+
+  wait_for_trigger(trigger_mask, trigger_values);
 
   __disable_irq();
 
-  do {
-  // read 5KB at a time, jump takes too many cycles
-  // 5KB at a time = 50KB flash used
-  // 2KB at a time = 32KB flash used
-  // 2KB version will slip ~83ns every ~170us or ~486ppm off due to jump
-  // 2KB version results in a 100KHz synchronus clock from TIM3 showing up as 100.037KHz
-  // alternative to test: use code in memory?
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-#include "read256.c"
-  } while(buffer < gpio_buffer+length);
+// good for 7.2MHz
+// check Src/read256.c for a higher speed version (~12MHz) that uses more flash
+    asm(
+      "ldr     r1, [%1]\n"
+      "poll:"
+      "strb    r1, [%0, #0]\n"
+      "adds    %0, #1\n"
+      "cmp     %2, %0\n"
+      "ldr     r1, [%1]\n" // moving this before the cmp slows the loop down to 6MHz
+      "bhi.n   poll\n"
+    : /* no outputs */
+    : "r" (buffer), "r" (&GPIOA->IDR), "r" (ending)
+    : "r1"
+    );
 
   __enable_irq();
 }

@@ -272,9 +272,9 @@ void poll_sump() {
     run_gpio = 0;
     if(divider < 11) {
       write_uart_s("using gpio_loop\n");
-      do_gpio_loop(readCount);
+      do_gpio_loop(readCount, trigger, trigger_values);
     } else {
-      do_gpio_dma(readCount); // TODO: triggers
+      do_gpio_dma(readCount, trigger, trigger_values);
     }
     int status = CDC_Transmit_FS(gpio_buffer, readCount);
     if(status != USBD_OK) {
