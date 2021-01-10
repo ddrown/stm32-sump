@@ -89,13 +89,13 @@ static void setupDelay(uint32_t divider) {
 }
 
 const static uint8_t metadata[] = {
-  1, 'A', 'G', 'L', 'A', 'S', 'v', '0', 0, // device name
-  2, '0', '.', '1', '3', 0,                // firmware version
-  0x21, 0, 0, 40, 0,                       // sample memory = 40*256 = 10240 bytes
-  0x23, 0, 0x5B, 0x8D, 80,                 // sample rate (6MHz)
-  0x40, 8,                                 // number of probes = 8
-  0x41, 2,                                 // protocol version 2
-  0                                        // end of data
+  0x01, 'A', 'G', 'L', 'A', 'S', 'v', '0', 0, // device name
+  0x02, '0', '.', '1', '3', 0,                // firmware version
+  0x21, 0, 0, 40, 0,                          // sample memory = 40*256 = 10240 bytes
+  0x23, 0, 0x5B, 0x8D, 0x80,                  // sample rate (6MHz)
+  0x40, 8,                                    // number of probes = 8
+  0x41, 2,                                    // protocol version 2
+  0                                           // end of data
 };
 
 static void get_metadata() {
